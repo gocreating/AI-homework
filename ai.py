@@ -129,29 +129,38 @@ class ai_agent():
     #   print '[no castle]'
 
   def performAvoidBullets(self):
-      bulletsInView = self.getBlocksFromView(self.player, self.bullets, 16*0.5)
-      bulletDirections = self.getRelativeDirections(self.player, bulletsInView)
+    bulletsInRegion = self.getBlocksFromRegion(self.player, self.bullets, 16*8)
 
-      if len(bulletsInView) > 0:
-        bullet = bulletsInView[0]
-        bulletDirection = bullet[1]
-        relDirection = bulletDirections[0]
-        if (bulletDirection != relDirection):
-          self.shoot = 1
-          self.move_dir = relDirection
-          print '[bullet in view] hit', self.directionToString(self.move_dir)
-        # if (bulletDirection == DIR_DOWN and relDirection == DIR_UP) or (bulletDirection == DIR_UP and relDirection == DIR_DOWN):
-        #   self.move_dir = self.getRandomDirection([DIR_LEFT, DIR_RIGHT])
-        # elif (bulletDirection == DIR_RIGHT and relDirection == DIR_LEFT) or (bulletDirection == DIR_LEFT and relDirection == DIR_RIGHT):
-        #   self.move_dir = self.getRandomDirection([DIR_UP, DIR_DOWN])
+    if len(bulletsInRegion) > 0:
+      bulletsWillHitPlayer = self.getBlocksFromView(self.player, bulletsInRegion, 8)
 
-      # if len(bulletsInView) == 1 and bulletDirections[0] == player[1]:
-      #   move_dir = random.randint(0,3)
-      #   print '[self\'s bullet in region] go', self.directionToString(move_dir)
-      # else:
-      #   # move_dir = self.getRandomMutexDirection(bulletDirections)
-      #   move_dir = random.randint(0,3)
-      #   print '[bullet in region] go', self.directionToString(move_dir)
+      if len(bulletsWillHitPlayer) > 0:
+        bulletsInView = self.getBlocksFromView(self.player, bulletsWillHitPlayer, -3)
+
+        if len(bulletsInView) > 0:
+          bullet = bulletsInView[0]
+          bulletMovingDirection = bullet[1]
+          bulletRelDirection = self.getRelativeDirection(self.player, bullet)
+          # the bullet aim at player
+          if (bulletMovingDirection == DIR_DOWN and bulletRelDirection == DIR_UP) or (bulletMovingDirection == DIR_UP and bulletRelDirection == DIR_DOWN) or (bulletMovingDirection == DIR_LEFT and bulletRelDirection == DIR_RIGHT) or (bulletMovingDirection == DIR_RIGHT and bulletRelDirection == DIR_LEFT):
+            shoot = 1
+            self.move_dir = bulletRelDirection
+            print '[bullet in view @ ', self.directionToString(bulletRelDirection), ', aim', self.directionToString(bulletMovingDirection), 'at player] hit', self.directionToString(self.move_dir)
+          # or just let it go
+          else:
+            print '[bullet in view @ ', self.directionToString(bulletRelDirection), ', aim', self.directionToString(bulletMovingDirection), '! at player] keep going', self.directionToString(self.move_dir)
+        else:
+          bullet = bulletsWillHitPlayer[0]
+          bulletMovingDirection = bullet[1]
+          bulletRelDirection = self.getRelativeDirection(self.player, bullet)
+
+          bulletRelDirection2D = self.getRelativeDirection2D(self.player, bullet)
+          bulletRelDirection2D.append(bulletMovingDirection)
+          self.move_dir = self.getRandomMutexDirection(bulletRelDirection2D)
+          print '[bullet @(', self.directionToString(bulletRelDirection2D[0]), ',', self.directionToString(bulletRelDirection2D[1]), ') may hit player] go', self.directionToString(self.move_dir)
+
+      else:
+        print '[bullet in safe region] keep going', self.directionToString(self.move_dir)
 
   def performAvoidDeadlock(self):
     player = self.player
