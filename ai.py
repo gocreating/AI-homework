@@ -10,6 +10,13 @@ DIR_DOWN = 2
 DIR_LEFT = 3
 DIR_NONE = 4
 
+TILE_EMPTY = 0
+TILE_BRICK = 1
+TILE_STEEL = 2
+TILE_WATER = 3
+TILE_GRASS = 4
+TILE_FROZE = 5
+
 class ai_agent():
   mapinfo = []
   shoot = 1
@@ -36,6 +43,81 @@ class ai_agent():
   # def Get_mapInfo:    fetch the map infomation
   # def Update_Strategy Update your strategy
 
+  def getEmptyMap(self, initValue):
+    emptyMap = []
+    for i in range (0, 26):
+      columns = []
+      for j in range (0, 26):
+        columns.append(initValue)
+      emptyMap.append(columns)
+    return emptyMap
+
+  def setTileMap(self):
+    tileMap = self.getEmptyMap(TILE_EMPTY)
+    for tile in self.tiles:
+      tileX = tile[0][0] / 16
+      tileY = tile[0][1] / 16
+      tileType = tile[1]
+      tileMap[tileY][tileX] = tileType
+    self.tileMap = tileMap
+
+  def getShortestPathToGoal(self, goalRect):
+    playerRect = self.player[0]
+    playerX = playerRect[0] / 16
+    playerY = playerRect[1] / 16
+    goalX = goalRect[0] / 16
+    goalY = goalRect[1] / 16
+
+    def toVisitedMap(tileMap):
+      visitedMap = self.getEmptyMap(True)
+      for i in range(0, 26):
+        for j in range(0, 26):
+          tile = tileMap[i][j]
+          if tile == TILE_EMPTY or tile == TILE_BRICK:
+            visitedMap[i][j] = False
+      return visitedMap
+
+    def getGoalPathTree(visitedMap, x, y):
+      # [upTree, rightTree, downTree, leftTree, goalDirection]
+
+      if x in [-1, 26] or y in [-1, 26] or visitedMap[y][x] == True:
+        return {
+          'children': None,
+          'isPathToGoal': False,
+        }
+      else:
+        visitedMap[y][x] = True
+
+        upTree = getGoalPathTree(visitedMap, x, y - 1)
+        rightTree = getGoalPathTree(visitedMap, x + 1, y)
+        downTree = getGoalPathTree(visitedMap, x, y + 1)
+        leftTree = getGoalPathTree(visitedMap, x - 1, y)
+        # if [upTree, rightTree, downTree, leftTree] == [None, None, None, None]:
+        #   children = None
+        return {
+          'children': [upTree, rightTree, downTree, leftTree],
+          'isPathToGoal': (x == goalX and y == goalY) or upTree['isPathToGoal'] or rightTree['isPathToGoal'] or downTree['isPathToGoal'] or leftTree['isPathToGoal'],
+        }
+
+    def getShortestGoalPath(goalPathTree):
+      if goalPathTree['isPathToGoal']:
+        pathLength = 9999999999
+        shortestPath = []
+        for idx, c in enumerate(goalPathTree['children']):
+          if c is not None and c['isPathToGoal']:
+            currentPath = list([idx]) + getShortestGoalPath(c)
+            if len(currentPath) < pathLength:
+              pathLength = len(currentPath)
+              shortestPath = currentPath
+        return shortestPath
+      else:
+        return []
+
+    visitedMap = toVisitedMap(self.tileMap)
+    goalPathTree = getGoalPathTree(visitedMap, playerX, playerY)
+    shortestGoalPath = getShortestGoalPath(goalPathTree)
+    return shortestGoalPath
+
   def delay(self):
     time.sleep(0.01)
 
@@ -50,10 +132,15 @@ class ai_agent():
 
       self.bullets = self.mapinfo[0]
       self.enemies = self.mapinfo[1]
+      self.tiles = self.mapinfo[2]
       self.player = self.mapinfo[3][0]
       self.castle = [[12*16, 24*16, 32, 32], 4, 0, 4]
 
+      self.setTileMap()
+
       self.move_dir = random.randint(0,3)
+    #   self.move_dir =       self.getShortestPathToGoal([0,0,0,0])
+
       self.performAttack()
       self.performAvoidCastle()
       self.performAvoidBullets()
