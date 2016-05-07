@@ -69,12 +69,27 @@ class ai_agent():
     goalY = goalRect[1] / 16
 
     def toVisitedMap(tileMap):
-      visitedMap = self.getEmptyMap(True)
+      visitedMap = self.getEmptyMap(False)
+
+      def updateMap(i, j, value):
+        if i in [-1, 26] or j in [-1, 26]:
+          return
+        else:
+          visitedMap[i][j] = value
+
       for i in range(0, 26):
         for j in range(0, 26):
           tile = tileMap[i][j]
-          if tile == TILE_EMPTY or tile == TILE_BRICK:
-            visitedMap[i][j] = False
+          if tile == TILE_FROZE or tile == TILE_GRASS or tile == TILE_WATER or tile == TILE_STEEL:
+            updateMap(i, j, True)
+            updateMap(i + 1, j, True)
+            updateMap(i - 1, j, True)
+            updateMap(i, j + 1, True)
+            updateMap(i, j - 1, True)
+            updateMap(i + 1, j + 1, True)
+            updateMap(i + 1, j - 1, True)
+            updateMap(i - 1, j + 1, True)
+            updateMap(i - 1, j - 1, True)
       return visitedMap
 
     def getGoalPathTree(visitedMap, x, y):
